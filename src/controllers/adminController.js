@@ -5,6 +5,8 @@ const cloudinary = require("../cloudinary"); // Make sure this path is correct
 
 const StudentProfile = require("../models/StudentProfile");
 const ProfessionalProfile = require("../models/ProfessionalProfile");
+const Job = require("../models/Job");
+const CompanyProfile = require("../models/CompanyProfile");
 
 async function addInstructor(req, res) {
   try {
@@ -647,6 +649,139 @@ async function getProfessionalById(req, res) {
   }
 }
 
+async function addJob(req, res) {
+  try {
+    const {
+      companyId, // The ID of the User (company) this job is for
+      title,
+      type,
+      salary,
+      skills,
+      description,
+      responsibilities,
+      minExperience,
+      workMode,
+      location,
+      applicationDeadline,
+      shortDescription,
+      overview,
+      growth,
+      companyDetails,
+      applicationProcess,
+      socialProof,
+      related,
+      externalApply,
+      applyLink,
+      status
+    } = req.body;
+
+    // Verify the company exists
+    const companyUser = await User.findById(companyId);
+    if (!companyUser || companyUser.type !== 'company') {
+      return res.status(404).json({ message: "Company not found or invalid user type" });
+    }
+
+    // Helper to parse JSON fields
+    const parseJson = (field) => {
+      if (typeof field === 'string') {
+        try {
+          return JSON.parse(field);
+        } catch (e) {
+          return undefined;
+        }
+      }
+      return field;
+    };
+
+    const parsedSalary = parseJson(salary);
+    const parsedSkills = parseJson(skills) || [];
+    const parsedResponsibilities = parseJson(responsibilities) || [];
+    const parsedOverview = parseJson(overview);
+    const parsedGrowth = parseJson(growth);
+    const parsedCompanyDetails = parseJson(companyDetails);
+    const parsedApplicationProcess = parseJson(applicationProcess);
+    const parsedSocialProof = parseJson(socialProof);
+    const parsedRelated = parseJson(related);
+
+    // Get company profile for logo if not provided in companyDetails overrides
+    const companyProfile = await CompanyProfile.findOne({ user: companyId });
+    const companyLogoUrl = companyProfile ? companyProfile.logoUrl : companyUser.avatarUrl;
+
+    const job = await Job.create({
+      title,
+      type,
+      salary: parsedSalary,
+      skills: parsedSkills,
+      description,
+      responsibilities: parsedResponsibilities,
+      minExperience: parseInt(minExperience) || 0,
+      workMode,
+      location,
+      applicationDeadline,
+      shortDescription,
+      overview: parsedOverview,
+      growth: parsedGrowth,
+      companyDetails: parsedCompanyDetails,
+      applicationProcess: parsedApplicationProcess,
+      socialProof: parsedSocialProof,
+      related: parsedRelated,
+      externalApply: externalApply === 'true' || externalApply === true,
+      applyLink,
+      status: status || 'active',
+      
+      // Admin posting on behalf of company
+      poster: req.user ? req.user._id : companyId, // If req.user is set (auth middleware), use it. Else fallback (should be protected)
+      posterModel: req.user ? "SystemUser" : "User", // Assuming this is an admin route
+      company: companyId,
+      companyName: companyUser.name,
+      companyLogoUrl
+    });
+
+    res.status(201).json({
+      message: "Job added successfully",
+      job
+    });
+
+  } catch (err) {
+    console.error("Add Job Error:", err);
+    res.status(500).json({ message: "Failed to add job", error: err.message });
+  }
+}
+
+async function getAllJobs(req, res) {
+  try {
+    const jobs = await Job.find()
+      .populate("company", "name email avatarUrl")
+      .populate("skills", "name")
+      .sort({ createdAt: -1 });
+    res.json(jobs);
+  } catch (err) {
+    console.error("Get All Jobs Error:", err);
+    res.status(500).json({ message: "Failed to get jobs", error: err.message });
+  }
+}
+
+async function getJobById(req, res) {
+  try {
+    const { id } = req.params;
+    const job = await Job.findById(id)
+      .populate("company", "name email avatarUrl")
+      .populate("skills", "name")
+      .populate("related.similarJobs", "title type location companyName companyLogoUrl")
+      .populate("related.relatedInternships", "title type location companyName companyLogoUrl");
+      // Add more populations if Course/Mentor models are available and referenced correctly
+
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+
+    res.json(job);
+  } catch (err) {
+    console.error("Get Job By ID Error:", err);
+    res.status(500).json({ message: "Failed to get job", error: err.message });
+  }
+}
+
 module.exports = {
   addInstructor,
   initMentor,
@@ -658,5 +793,10 @@ module.exports = {
   getStudentById,
   addProfessional,
   getAllProfessionals,
-  getProfessionalById
+  getProfessionalById,
+  addJob,
+  getAllJobs,
+  getJobById
 };
+
+

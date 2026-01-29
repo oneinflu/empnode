@@ -11,7 +11,10 @@ const {
   getStudentById,
   addProfessional,
   getAllProfessionals,
-  getProfessionalById
+  getProfessionalById,
+  addJob,
+  getAllJobs,
+  getJobById
 } = require("../src/controllers/adminController");
 const { protectSystemUser } = require("../src/middleware/authMiddleware"); // Assuming protectSystemUser is for admins
 
@@ -40,6 +43,20 @@ router.post(
 
 router.get("/students", getAllStudents);
 router.get("/students/:id", getStudentById);
+
+router.get("/professionals", getAllProfessionals);
+router.get("/professionals/:id", getProfessionalById);
+
+// Jobs (Admin on behalf of Company)
+router.post(
+  "/jobs/add",
+  // protectSystemUser, // Uncomment when auth is ready
+  upload.none(), // Jobs usually don't have file uploads in this specific endpoint, but adjust if needed
+  addJob
+);
+
+router.get("/jobs", getAllJobs);
+router.get("/jobs/:id", getJobById);
 
 // POST /api/admin/instructors/add
 router.post(
