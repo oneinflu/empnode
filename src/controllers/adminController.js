@@ -6,6 +6,7 @@ const cloudinary = require("../cloudinary"); // Make sure this path is correct
 const StudentProfile = require("../models/StudentProfile");
 const ProfessionalProfile = require("../models/ProfessionalProfile");
 const Job = require("../models/Job");
+const Course = require("../models/Course");
 
 async function addInstructor(req, res) {
   try {
@@ -781,6 +782,141 @@ async function getJobById(req, res) {
   }
 }
 
+async function addCourse(req, res) {
+  try {
+    const {
+      title,
+      company, // ID
+      level,
+      duration,
+      format,
+      salary, // price
+      originalPrice,
+      rating,
+      enrolledCount,
+      shortDescription,
+      description,
+      highlights,
+      prerequisites,
+      instructor, // ID
+      modules,
+      targetAudience,
+      outcomes,
+      faqs,
+      growth,
+      category,
+      subCategory,
+      skills,
+      createdBy // ID
+    } = req.body;
+
+    let bannerUrl = "";
+    if (req.file) {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "courses",
+        });
+        bannerUrl = result.secure_url;
+      } catch (uploadError) {
+        console.error("Banner upload failed:", uploadError);
+      }
+    }
+
+    const parseJson = (field) => {
+      if (typeof field === 'string') {
+        try { return JSON.parse(field); } catch (e) { return undefined; }
+      }
+      return field;
+    };
+
+    const course = await Course.create({
+      title,
+      company: company || undefined,
+      level,
+      duration,
+      format,
+      salary,
+      originalPrice,
+      rating: parseFloat(rating) || 0,
+      enrolledCount: parseInt(enrolledCount) || 0,
+      shortDescription,
+      description,
+      highlights: parseJson(highlights) || [],
+      prerequisites: parseJson(prerequisites) || [],
+      bannerUrl,
+      instructor: instructor || undefined,
+      modules: parseJson(modules) || [],
+      targetAudience: parseJson(targetAudience) || [],
+      outcomes: parseJson(outcomes) || {},
+      faqs: parseJson(faqs) || [],
+      growth: parseJson(growth) || {},
+      category: category || undefined,
+      subCategory: subCategory || undefined,
+      skills: parseJson(skills) || [], // IDs
+      createdBy: createdBy || (req.user ? req.user._id : undefined)
+    });
+
+    res.status(201).json({
+      message: "Course added successfully",
+      course
+    });
+
+  } catch (err) {
+    console.error("Add Course Error:", err);
+    res.status(500).json({ message: "Failed to add course", error: err.message });
+  }
+}
+
+async function getAllCourses(req, res) {
+  try {
+    const courses = await Course.find()
+      .populate("company", "name logoUrl") 
+      .populate({
+         path: "instructor",
+         select: "user currentRole currentCompany",
+         populate: { path: "user", select: "name avatarUrl" }
+      })
+      .populate("category", "name")
+      .populate("skills", "name")
+      .sort("-createdAt");
+    res.json(courses);
+  } catch (err) {
+    console.error("Get All Courses Error:", err);
+    res.status(500).json({ message: "Failed to get courses", error: err.message });
+  }
+}
+
+async function getCourseById(req, res) {
+  try {
+    const { id } = req.params;
+    const course = await Course.findById(id)
+      .populate("company", "name logoUrl")
+      .populate({
+         path: "instructor",
+         select: "user currentRole currentCompany",
+         populate: { path: "user", select: "name avatarUrl" }
+      })
+      .populate("category", "name")
+      .populate("skills", "name")
+      .populate("growth.relatedJobs", "title location type")
+      .populate("growth.relatedInternships", "title location type")
+      .populate("growth.nextLevelCourses", "title level")
+      .populate({
+        path: "growth.recommendedMentors",
+        populate: { path: "user", select: "name avatarUrl" }
+      });
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    res.json(course);
+  } catch (err) {
+    console.error("Get Course By ID Error:", err);
+    res.status(500).json({ message: "Failed to get course", error: err.message });
+  }
+}
+
 module.exports = {
   addInstructor,
   initMentor,
@@ -795,7 +931,10 @@ module.exports = {
   getProfessionalById,
   addJob,
   getAllJobs,
-  getJobById
+  getJobById,
+  addCourse,
+  getAllCourses,
+  getCourseById
 };
 
 

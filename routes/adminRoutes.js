@@ -14,7 +14,10 @@ const {
   getProfessionalById,
   addJob,
   getAllJobs,
-  getJobById
+  getJobById,
+  addCourse,
+  getAllCourses,
+  getCourseById
 } = require("../src/controllers/adminController");
 const { protectSystemUser } = require("../src/middleware/authMiddleware"); // Assuming protectSystemUser is for admins
 
@@ -86,5 +89,15 @@ router.put(
   upload.none(), // Use none() if only text fields, or single() if file upload needed later
   updateMentor
 );
+
+// Courses
+router.post(
+  "/courses/add",
+  upload.single("banner"),
+  addCourse
+);
+
+router.get("/courses", getAllCourses);
+router.get("/courses/:id", getCourseById);
 
 module.exports = router;
