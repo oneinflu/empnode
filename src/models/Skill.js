@@ -8,6 +8,11 @@ const skillSchema = new mongoose.Schema(
       trim: true,
       unique: true,
     },
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Skill",
+      default: null,
+    },
   },
   {
     timestamps: true,

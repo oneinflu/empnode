@@ -16,6 +16,19 @@ router.post(
   addCompany
 );
 
+// Students
+router.post(
+  "/students/add",
+  upload.fields([
+    { name: "avatar", maxCount: 1 },
+    { name: "resume", maxCount: 1 }
+  ]),
+  addStudent
+);
+
+router.get("/students", getAllStudents);
+router.get("/students/:id", getStudentById);
+
 // POST /api/admin/instructors/add
 router.post(
   "/instructors/add", 

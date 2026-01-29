@@ -3,6 +3,8 @@ const MentorProfile = require("../models/MentorProfile");
 const CompanyProfile = require("../models/CompanyProfile");
 const cloudinary = require("../cloudinary"); // Make sure this path is correct
 
+const StudentProfile = require("../models/StudentProfile");
+
 async function addInstructor(req, res) {
   try {
     const {
@@ -399,10 +401,134 @@ async function addCompany(req, res) {
   }
 }
 
+async function addStudent(req, res) {
+  try {
+    const {
+      name,
+      email,
+      password,
+      phone,
+      educations,
+      internships,
+      skills
+    } = req.body;
+
+    // 1. Create User
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User with this email already exists" });
+    }
+
+    // Handle avatar upload
+    let avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+    if (req.files && req.files.avatar && req.files.avatar[0]) {
+      try {
+        const result = await cloudinary.uploader.upload(req.files.avatar[0].path, {
+          folder: "users",
+        });
+        avatarUrl = result.secure_url;
+      } catch (uploadError) {
+        console.error("Avatar upload failed:", uploadError);
+      }
+    }
+
+    let resumeUrl = "";
+    if (req.files && req.files.resume && req.files.resume[0]) {
+      try {
+        // Upload resume (raw resource type for PDF/Docs)
+        const result = await cloudinary.uploader.upload(req.files.resume[0].path, {
+          folder: "resumes",
+          resource_type: "auto"
+        });
+        resumeUrl = result.secure_url;
+      } catch (uploadError) {
+        console.error("Resume upload failed:", uploadError);
+      }
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      phone,
+      type: "student",
+      avatarUrl
+    });
+
+    // Helper to parse JSON fields
+    const parseJson = (field) => {
+      if (typeof field === 'string') {
+        try {
+          return JSON.parse(field);
+        } catch (e) {
+          return [];
+        }
+      }
+      return field || [];
+    };
+
+    const studentProfile = await StudentProfile.create({
+      user: user._id,
+      educations: parseJson(educations),
+      internships: parseJson(internships),
+      skills: parseJson(skills), // Array of ObjectIds
+      resumeUrl
+    });
+
+    res.status(201).json({
+      message: "Student added successfully",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        type: user.type
+      },
+      studentProfile
+    });
+
+  } catch (err) {
+    console.error("Add Student Error:", err);
+    res.status(500).json({ message: "Failed to add student", error: err.message });
+  }
+}
+
+async function getAllStudents(req, res) {
+  try {
+    const students = await StudentProfile.find()
+      .populate("user", "name email avatarUrl phone type")
+      .populate("skills", "name");
+    res.json(students);
+  } catch (err) {
+    console.error("Get All Students Error:", err);
+    res.status(500).json({ message: "Failed to get students", error: err.message });
+  }
+}
+
+async function getStudentById(req, res) {
+  try {
+    const { id } = req.params;
+    const student = await StudentProfile.findById(id)
+      .populate("user", "name email avatarUrl phone type")
+      .populate("skills", "name");
+
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    res.json(student);
+  } catch (err) {
+    console.error("Get Student By ID Error:", err);
+    res.status(500).json({ message: "Failed to get student", error: err.message });
+  }
+}
+
 module.exports = {
   addInstructor,
   initMentor,
   updateMentor,
   addMentor,
-  addCompany
+  addCompany,
+  addStudent,
+  getAllStudents,
+  getStudentById
 };
