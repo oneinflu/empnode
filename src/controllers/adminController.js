@@ -4,6 +4,7 @@ const CompanyProfile = require("../models/CompanyProfile");
 const cloudinary = require("../cloudinary"); // Make sure this path is correct
 
 const StudentProfile = require("../models/StudentProfile");
+const ProfessionalProfile = require("../models/ProfessionalProfile");
 
 async function addInstructor(req, res) {
   try {
@@ -522,6 +523,130 @@ async function getStudentById(req, res) {
   }
 }
 
+async function addProfessional(req, res) {
+  try {
+    const {
+      name,
+      email,
+      password,
+      phone,
+      educations,
+      internships,
+      workExperiences,
+      certifications,
+      skills
+    } = req.body;
+
+    // 1. Create User
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User with this email already exists" });
+    }
+
+    // Handle avatar upload
+    let avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+    if (req.files && req.files.avatar && req.files.avatar[0]) {
+      try {
+        const result = await cloudinary.uploader.upload(req.files.avatar[0].path, {
+          folder: "users",
+        });
+        avatarUrl = result.secure_url;
+      } catch (uploadError) {
+        console.error("Avatar upload failed:", uploadError);
+      }
+    }
+
+    let resumeUrl = "";
+    if (req.files && req.files.resume && req.files.resume[0]) {
+      try {
+        const result = await cloudinary.uploader.upload(req.files.resume[0].path, {
+          folder: "resumes",
+          resource_type: "auto"
+        });
+        resumeUrl = result.secure_url;
+      } catch (uploadError) {
+        console.error("Resume upload failed:", uploadError);
+      }
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      phone,
+      type: "professional",
+      avatarUrl
+    });
+
+    // Helper to parse JSON fields
+    const parseJson = (field) => {
+      if (typeof field === 'string') {
+        try {
+          return JSON.parse(field);
+        } catch (e) {
+          return [];
+        }
+      }
+      return field || [];
+    };
+
+    const professionalProfile = await ProfessionalProfile.create({
+      user: user._id,
+      educations: parseJson(educations),
+      internships: parseJson(internships),
+      workExperiences: parseJson(workExperiences),
+      certifications: parseJson(certifications),
+      skills: parseJson(skills),
+      resumeUrl
+    });
+
+    res.status(201).json({
+      message: "Professional added successfully",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        type: user.type
+      },
+      professionalProfile
+    });
+
+  } catch (err) {
+    console.error("Add Professional Error:", err);
+    res.status(500).json({ message: "Failed to add professional", error: err.message });
+  }
+}
+
+async function getAllProfessionals(req, res) {
+  try {
+    const professionals = await ProfessionalProfile.find()
+      .populate("user", "name email avatarUrl phone type")
+      .populate("skills", "name");
+    res.json(professionals);
+  } catch (err) {
+    console.error("Get All Professionals Error:", err);
+    res.status(500).json({ message: "Failed to get professionals", error: err.message });
+  }
+}
+
+async function getProfessionalById(req, res) {
+  try {
+    const { id } = req.params;
+    const professional = await ProfessionalProfile.findById(id)
+      .populate("user", "name email avatarUrl phone type")
+      .populate("skills", "name");
+
+    if (!professional) {
+      return res.status(404).json({ message: "Professional not found" });
+    }
+
+    res.json(professional);
+  } catch (err) {
+    console.error("Get Professional By ID Error:", err);
+    res.status(500).json({ message: "Failed to get professional", error: err.message });
+  }
+}
+
 module.exports = {
   addInstructor,
   initMentor,
@@ -530,5 +655,8 @@ module.exports = {
   addCompany,
   addStudent,
   getAllStudents,
-  getStudentById
+  getStudentById,
+  addProfessional,
+  getAllProfessionals,
+  getProfessionalById
 };

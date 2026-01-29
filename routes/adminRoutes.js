@@ -1,6 +1,18 @@
 const express = require("express");
 const multer = require("multer");
-const { addInstructor, initMentor, updateMentor, addMentor, addCompany } = require("../src/controllers/adminController");
+const {
+  addInstructor,
+  initMentor,
+  updateMentor,
+  addMentor,
+  addCompany,
+  addStudent,
+  getAllStudents,
+  getStudentById,
+  addProfessional,
+  getAllProfessionals,
+  getProfessionalById
+} = require("../src/controllers/adminController");
 const { protectSystemUser } = require("../src/middleware/authMiddleware"); // Assuming protectSystemUser is for admins
 
 const router = express.Router();
