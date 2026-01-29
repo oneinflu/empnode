@@ -204,9 +204,21 @@ async function getCompanyProfileByUserId(req, res) {
   }
 }
 
+async function getAllCompanies(req, res) {
+  try {
+    const companies = await CompanyProfile.find()
+      .populate("user", "name email avatarUrl type")
+      .populate("skillsLookingFor", "name");
+    res.json(companies);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to get companies" });
+  }
+}
+
 module.exports = {
   createCompanyProfile,
   getMyCompanyProfile,
   updateMyCompanyProfile,
   getCompanyProfileByUserId,
+  getAllCompanies,
 };

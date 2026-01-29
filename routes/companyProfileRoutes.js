@@ -5,11 +5,14 @@ const {
   getMyCompanyProfile,
   updateMyCompanyProfile,
   getCompanyProfileByUserId,
+  getAllCompanies,
 } = require("../src/controllers/companyProfileController");
 const { protectUser } = require("../src/middleware/authMiddleware");
 
 const router = express.Router();
 const upload = multer({ dest: "tmp_uploads/" });
+
+router.get("/", getAllCompanies);
 
 router.post(
   "/me",
