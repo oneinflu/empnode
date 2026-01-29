@@ -1,0 +1,39 @@
+const express = require("express");
+const multer = require("multer");
+const {
+  createCompanyProfile,
+  getMyCompanyProfile,
+  updateMyCompanyProfile,
+  getCompanyProfileByUserId,
+} = require("../src/controllers/companyProfileController");
+const { protectUser } = require("../src/middleware/authMiddleware");
+
+const router = express.Router();
+const upload = multer({ dest: "tmp_uploads/" });
+
+router.post(
+  "/me",
+  protectUser,
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "cover", maxCount: 1 },
+  ]),
+  createCompanyProfile
+);
+
+router.get("/me", protectUser, getMyCompanyProfile);
+
+router.put(
+  "/me",
+  protectUser,
+  upload.fields([
+    { name: "logo", maxCount: 1 },
+    { name: "cover", maxCount: 1 },
+  ]),
+  updateMyCompanyProfile
+);
+
+router.get("/user/:userId", getCompanyProfileByUserId);
+
+module.exports = router;
+
