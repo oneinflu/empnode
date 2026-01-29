@@ -215,10 +215,28 @@ async function getAllCompanies(req, res) {
   }
 }
 
+async function getCompanyProfileById(req, res) {
+  try {
+    const { id } = req.params;
+    const profile = await CompanyProfile.findById(id)
+      .populate("user", "name email avatarUrl type")
+      .populate("skillsLookingFor", "name");
+
+    if (!profile) {
+      return res.status(404).json({ message: "Company profile not found" });
+    }
+
+    res.json(profile);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to get company profile" });
+  }
+}
+
 module.exports = {
   createCompanyProfile,
   getMyCompanyProfile,
   updateMyCompanyProfile,
   getCompanyProfileByUserId,
   getAllCompanies,
+  getCompanyProfileById,
 };
