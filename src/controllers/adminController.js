@@ -6,7 +6,6 @@ const cloudinary = require("../cloudinary"); // Make sure this path is correct
 const StudentProfile = require("../models/StudentProfile");
 const ProfessionalProfile = require("../models/ProfessionalProfile");
 const Job = require("../models/Job");
-const CompanyProfile = require("../models/CompanyProfile");
 
 async function addInstructor(req, res) {
   try {
